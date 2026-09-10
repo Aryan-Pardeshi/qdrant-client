@@ -48,6 +48,10 @@ from qdrant_client.local.datetime_utils import parse
             datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=-10))),
         ),
         (
+            "2021-01-01T00:00:00+05",
+            datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))),
+        ),
+        (
             "2021-01-01 00:00:00-03:00",
             datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=-3))),
         ),
@@ -55,3 +59,18 @@ from qdrant_client.local.datetime_utils import parse
 )
 def test_parse_dates(date_str: str, expected: datetime):
     assert parse(date_str) == expected
+
+
+@pytest.mark.parametrize(  # type: ignore
+    "date_str",
+    [
+        # truncated datetimes: neither is an accepted format in core, but the
+        # hour-only offset fallback used to complete them into one
+        "2021-01-01 00",
+        "2021-01-01T00:00",
+        "not a date",
+        "",
+    ],
+)
+def test_parse_unsupported_dates(date_str: str):
+    assert parse(date_str) is None

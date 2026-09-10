@@ -1,10 +1,4 @@
-import re
 from datetime import datetime, timezone
-
-# An hour-only UTC offset at the end of the string, e.g. the "+01" in
-# "2021-01-01 00:00:00.000+01". Python can parse "+HH:MM" but not "+HH", so
-# these are completed with ":00" and parsed again.
-hour_only_offset = re.compile(r"\d{2}:\d{2}(:\d{2})?([.,]\d+)?[+-]\d{2}$")
 
 # These are the formats accepted by qdrant core
 available_formats = [
@@ -53,11 +47,12 @@ def parse(date_str: str) -> datetime | None:
     # "2021-01-01 00:00:00.000+01"
     # "2021-01-01 00:00:00.000-10"
     #
-    # Only strings that actually end in an hour-only offset get the retry.
-    # Appending ":00" unconditionally also completed truncated datetimes --
-    # "2024-06-15 12" became "2024-06-15 12:00" and "2024-06-15T12:30" became
-    # "2024-06-15T12:30:00" -- so local mode accepted values qdrant core rejects.
-    if hour_only_offset.search(date_str):
+    # Only strings ending in an hour-only offset get the retry. Appending ":00"
+    # unconditionally also completed truncated datetimes, e.g. "2024-06-15 12"
+    # became "2024-06-15 12:00" and "2024-06-15T12:30" became
+    # "2024-06-15T12:30:00", so local mode accepted values qdrant core rejects.
+    offset = date_str[-3:]
+    if len(offset) == 3 and offset[0] in "+-" and offset[1:].isdigit():
         return parse_available_formats(date_str + ":00")
 
     return None
