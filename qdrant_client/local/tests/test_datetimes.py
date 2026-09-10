@@ -47,6 +47,30 @@ from qdrant_client.local.datetime_utils import parse
             "2021-01-01 00:00:00.000-10",
             datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=-10))),
         ),
+        ("2021-01-01T00:00", datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone.utc)),
+        # core reads these too: a lowercase "z", whitespace ahead of the date, and the two
+        # shapes chrono's Display writes
+        ("2021-01-01T00:00:00z", datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone.utc)),
+        (" 2021-01-01T00:00:00", datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone.utc)),
+        ("2021-01-01 00:00:00 UTC", datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone.utc)),
+        (
+            "2021-01-01 00:00:00.123 +01:00",
+            datetime(2021, 1, 1, 0, 0, 0, 123000, tzinfo=timezone(timedelta(hours=1))),
+        ),
+        (
+            "2021-01-01 00:00:00 +0530",
+            datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5, minutes=30))),
+        ),
+        # core keeps nanoseconds, datetime stops at microseconds, so a longer fraction is
+        # cut short rather than rejected
+        (
+            "2021-01-01T00:00:00.123456789",
+            datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=timezone.utc),
+        ),
+        (
+            "2021-01-01 00:00:00.1234567+01:00",
+            datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=timezone(timedelta(hours=1))),
+        ),
         (
             "2021-01-01T00:00:00+05",
             datetime(2021, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=5))),
@@ -64,10 +88,9 @@ def test_parse_dates(date_str: str, expected: datetime):
 @pytest.mark.parametrize(  # type: ignore
     "date_str",
     [
-        # truncated datetimes: neither is an accepted format in core, but the
-        # hour-only offset fallback used to complete them into one
+        # an hour on its own is not an accepted format in core, but the
+        # hour-only offset fallback used to complete it into one
         "2021-01-01 00",
-        "2021-01-01T00:00",
         "not a date",
         "",
     ],
